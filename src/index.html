@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASHOT Creator Studio</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="splash">
+      <svg class="logo" viewBox="0 0 64 64" role="img" aria-label="ASHOT.LIVE">
+        <defs>
+          <linearGradient id="brandG" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FF7A26"></stop>
+            <stop offset="100%" stop-color="#FF3D2E"></stop>
+          </linearGradient>
+        </defs>
+        <path d="M 48 21 L 60 16 L 60 48 L 48 43 Z" fill="url(#brandG)"></path>
+        <rect x="5" y="13" width="44" height="38" rx="7" ry="7" fill="none" stroke="url(#brandG)" stroke-width="3.5"></rect>
+        <path d="M 18 22 L 18 42 L 38 32 Z" fill="url(#brandG)"></path>
+      </svg>
+
+      <h1 class="wordmark">ASHOT Creator Studio</h1>
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="status" id="status">正在连接 creator.ashot.live …</p>
+    </main>
+  </body>
+</html>
