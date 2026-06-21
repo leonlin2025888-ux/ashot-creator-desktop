@@ -1,7 +1,6 @@
 name: Release
 
-# 推 tag(v*)触发,出 Windows + macOS 安装包并上传到 GitHub Release。
-# 也可在 Actions 页手动触发(workflow_dispatch)做一次不签名的构建验证。
+# 推 tag(v*)=构建 + 签名 + 发 Release;手动触发=只构建验证(双平台,不发 Release)。
 on:
   push:
     tags:
@@ -12,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -20,9 +19,11 @@ jobs:
           # macOS:Apple Silicon + Intel 通用包(.dmg / .app)
           - platform: macos-latest
             args: "--target universal-apple-darwin"
+            rust_targets: "aarch64-apple-darwin,x86_64-apple-darwin"
           # Windows:.msi + NSIS(.exe)
           - platform: windows-latest
             args: ""
+            rust_targets: ""
 
     runs-on: ${{ matrix.platform }}
 
@@ -37,8 +38,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # macOS 通用包需要两个目标架构
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.rust_targets }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -48,11 +48,24 @@ jobs:
       - name: Install frontend deps
         run: npm install
 
-      - name: Build, sign & release
+      # 是否为 tag 触发(决定要不要发 Release)
+      - name: Detect release context
+        id: ctx
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "tag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build (and release on tag)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # ----- macOS 签名 + 公证(复用公司现有 Apple Developer 账号)-----
+          # ----- macOS 签名 + 公证(tag 触发且配了 secrets 时生效)-----
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -60,9 +73,23 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "ASHOT Creator Studio ${{ github.ref_name }}"
+          # tag 触发才发 Release;手动触发 tagName 为空 => 只构建不发布
+          tagName: ${{ steps.ctx.outputs.tag }}
+          releaseName: ${{ steps.ctx.outputs.is_release == 'true' && format('ASHOT Creator Studio {0}', steps.ctx.outputs.tag) || '' }}
           releaseBody: "桌面客户端安装包(Windows / macOS)。"
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      # 手动触发时把产物传上去,方便下载验证(tag 触发已进 Release,这步也无妨)
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashot-creator-${{ matrix.platform }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            src-tauri/target/**/release/bundle/dmg/*.dmg
+            src-tauri/target/**/release/bundle/macos/*.app
+            src-tauri/target/**/release/bundle/msi/*.msi
+            src-tauri/target/**/release/bundle/nsis/*.exe
