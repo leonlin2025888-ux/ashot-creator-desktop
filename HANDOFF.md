@@ -3,11 +3,25 @@
 **项目路径:** `/Users/justinopenclaw/projects/ashot-creator-desktop`
 **目标:** Tauri 2 桌面壳,壳套 `https://creator.ashot.live/`,出 **Windows + Mac** 安装包,让创作者本地安装运行。AI 生成仍走我们服务器 API(CLIPROXY),文件可存创作者本地。
 
-## 当前状态(已完成)
-- 用官方 `create-tauri-app`(vanilla 模板)生成 Tauri 2 脚手架,已从主仓库 `ashot-creator-mvp/` 移到本独立目录。
-- 结构:`package.json` · `src/`(index.html/main.js/styles.css)· `src-tauri/`(Cargo.toml / build.rs / tauri.conf.json / capabilities/ / icons/ / src/)。
-- **尚未定制**:`src-tauri/tauri.conf.json` 还是默认值(productName "desktop")。
-- **本机 Rust 未安装**(Tauri 构建需要)。
+## 当前状态(2026-06-20 已推进)
+- ✅ Tauri 2 脚手架(vanilla 模板),独立目录。
+- ✅ `src-tauri/tauri.conf.json` 已定制:productName `ASHOT Creator Studio`、identifier `live.ashot.creator.desktop`、主窗口 `label:"main"` 直接 `url` 指向 `https://creator.ashot.live/`、targets `app/dmg/nsis/msi`、category Productivity。
+- ✅ 品牌图标已替换(`tauri icon` 用 `ashot-creator-mvp/public/brand/app-icon-ios-1024.png` 生成 icns/ico/全平台 png)。
+- ✅ 品牌加载页:`src/`(index.html/styles.css/main.js)改成深色 + 橙红渐变(#FF7A26→#FF3D2E)logo + 加载动画 + 离线提示;移除了 greet 样板。
+- ✅ Rust 工具链已装(cargo/rustc 1.96.0,经 **USTC 镜像** rustup;`~/.cargo/config.toml` 配 USTC crates 镜像加速依赖)。
+- ✅ **Mac 包已构建成功**:`src-tauri/target/release/bundle/` 下 `ASHOT Creator Studio.app`(8.5M)+ `ASHOT Creator Studio_0.1.0_aarch64.dmg`(3.2M)。已 `open` 验证可启动、无崩溃。
+- ✅ GitHub Actions CI:`.github/workflows/release.yml`(macOS 通用包 + 签名公证 secrets;Windows msi/nsis;推 tag `v*` 触发)。
+- ✅ `git init` + 首次提交完成(72 文件)。
+- ⬜ **未做**:Mac 签名/公证(需真实 Apple 证书 secrets,见下)、Windows 包(只能 CI 出)、推到 GitHub 远程触发 CI。
+
+### 国内网络踩坑记录(重要)
+- 官方 rust-lang.org / rsproxy.cn 的 rustup-init 下载会卡死(<10B/s)。→ 用 **USTC**:`https://mirrors.ustc.edu.cn/rust-static/rustup/dist/aarch64-apple-darwin/rustup-init`,`RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static`。
+- rsproxy crates 镜像构建时也会超时。→ `~/.cargo/config.toml` 用 USTC:`sparse+https://mirrors.ustc.edu.cn/crates.io-index/`。
+- npm 首装 Tauri 原生二进制会损坏(npm 可选依赖 bug)。→ 删 node_modules+package-lock,`npm install --include=optional`,registry 用 `registry.npmmirror.com`。
+- `brew install rust` 依赖 llvm(~1.5G)且 ghcr 下载失败,**别用**,用 rustup+USTC。
+
+### 旧版历史(已不适用,留档)
+- 原:productName 默认 "desktop",本机 Rust 未安装。
 
 ## 关键决策(已和用户确认)
 - **形态 = 方案 A**:Tauri 壳加载 creator.ashot.live(快速 v1),后续再演进本地存储/本地优先。
